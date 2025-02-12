@@ -16,6 +16,33 @@ public class Player
     {
         Name = newName;
     }
+
+    public void AddItemToInventory(Item item)
+    {
+        Inventory.Add(item);
+    }
+
+    public void RemoveItemFromInventory(string itemName)
+    {
+        int itemIndex = CollectionUtilities.SearchCollectionByNameIndex(Inventory, itemName);
+        if (itemIndex != -1)
+        {
+            CollectionUtilities.RemoveFromCollectionByIndexNumber(Inventory, itemIndex);
+        }
+        else
+        {
+            Console.WriteLine("Item not found in inventory.");
+        }
+    }
+
+    public void ListInventory()
+    {
+        Console.WriteLine($"Inventory of {Name}:");
+        foreach (var item in Inventory)
+        {
+            Console.WriteLine($"Item: {item.Name}, Amount: {item.Amount}, Value: {item.Value}");
+        }
+    }
 }
 
 public class Item
@@ -104,15 +131,74 @@ public static class Library
     }
 }
 
+public class CollectionUtilities
+{
+   
+    public static bool SearchCollectionByName(List<Item> list, string itemName)
+    {
+        foreach (var item in list)
+        {
+            if (item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    
+    public static int SearchCollectionByNameIndex(List<Item> list, string itemName)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].Name.Equals(itemName, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    
+    public static void AddToCollectionByName(List<Item> list, Item item)
+    {
+        list.Add(item);
+    }
+
+    
+    public static void RemoveFromCollectionByIndexNumber(List<Item> list, int itemIndexNumber)
+    {
+        if (itemIndexNumber >= 0 && itemIndexNumber < list.Count)
+        {
+            list.RemoveAt(itemIndexNumber);
+        }
+        else
+        {
+            Console.WriteLine("Invalid index number.");
+        }
+    }
+}
+
 public class Program
 {
     public static void Main()
     {
-        Player player = new Player("Default Name");
-        player.UpdateName("New Player Name");
+        Console.Title = "Crafting System By Davion Horn";
+
+        Console.Write("Enter your player name: ");
+        string playerName = Library.GetUserInput();
+
+        Player player = new Player(playerName);
 
         Item item1 = new Item("Wood", 10, 5.0m);
         Item item2 = new Item("Iron", 5, 15.0m);
+
+        
+        player.AddItemToInventory(item1);
+        player.AddItemToInventory(item2);
+
+        
+        player.ListInventory();
 
         Recipe recipe = new Recipe("Iron Sword", 1, 50.0m);
         recipe.AddRequiredItem(item1, 2);
@@ -125,8 +211,8 @@ public class Program
         workshop.ShowRecipeDetails("Iron Sword");
 
         Console.WriteLine("Enter a number:");
-        string userInput = Library.GetUserInput();
-        if (Library.IsNumber(userInput))
+        string userInput2 = Library.GetUserInput();
+        if (Library.IsNumber(userInput2))
         {
             Console.WriteLine("You entered a valid number.");
         }
@@ -134,6 +220,17 @@ public class Program
         {
             Console.WriteLine("Invalid number.");
         }
+
+        
+        List<Item> inventory = new List<Item>
+        {
+            new Item("Loaf of Bread", 1, 2.5m),
+            new Item("Milk", 1, 1.5m)
+        };
+
+        
+        int itemIndex = CollectionUtilities.SearchCollectionByNameIndex(inventory, "Loaf of Bread");
+        CollectionUtilities.RemoveFromCollectionByIndexNumber(inventory, itemIndex);
     }
 }
 
@@ -141,7 +238,7 @@ public class Program
 /*
  * Craft System
  * Davion Horn
- * Application created in PROG 201 Programming I
+ * Application created in PROG 201 Programming
  * With code demos from instructor
  * Spring 2025
  */
