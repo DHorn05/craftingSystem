@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Player
 {
@@ -22,12 +23,24 @@ public class Player
         Inventory.Add(item);
     }
 
-    public void RemoveItemFromInventory(string itemName)
+    public void RemoveItemFromInventory(string itemName, int amount)
     {
         int itemIndex = CollectionUtilities.SearchCollectionByNameIndex(Inventory, itemName);
         if (itemIndex != -1)
         {
-            CollectionUtilities.RemoveFromCollectionByIndexNumber(Inventory, itemIndex);
+            var item = Inventory[itemIndex];
+            if (item.Amount >= amount)
+            {
+                item.Amount -= amount;
+                if (item.Amount == 0)
+                {
+                    CollectionUtilities.RemoveFromCollectionByIndexNumber(Inventory, itemIndex);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not enough of the item in inventory to remove.");
+            }
         }
         else
         {
@@ -131,22 +144,13 @@ public static class Library
     }
 }
 
-public class CollectionUtilities
+public static class CollectionUtilities
 {
-   
     public static bool SearchCollectionByName(List<Item> list, string itemName)
     {
-        foreach (var item in list)
-        {
-            if (item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
+        return list.Any(item => item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
     }
 
-    
     public static int SearchCollectionByNameIndex(List<Item> list, string itemName)
     {
         for (int i = 0; i < list.Count; i++)
@@ -159,13 +163,11 @@ public class CollectionUtilities
         return -1;
     }
 
-    
     public static void AddToCollectionByName(List<Item> list, Item item)
     {
         list.Add(item);
     }
 
-    
     public static void RemoveFromCollectionByIndexNumber(List<Item> list, int itemIndexNumber)
     {
         if (itemIndexNumber >= 0 && itemIndexNumber < list.Count)
@@ -176,6 +178,20 @@ public class CollectionUtilities
         {
             Console.WriteLine("Invalid index number.");
         }
+    }
+}
+
+public static class InventoryUtilities
+{
+    public static bool CheckInventoryForItem(List<Item> inventory, string itemName)
+    {
+        return inventory.Any(item => item.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static int GetItemAmount(List<Item> inventory, string itemName)
+    {
+        var item = inventory.FirstOrDefault(i => i.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+        return item?.Amount ?? 0;
     }
 }
 
@@ -190,50 +206,125 @@ public class Program
 
         Player player = new Player(playerName);
 
-        Item item1 = new Item("Wood", 10, 5.0m);
-        Item item2 = new Item("Iron", 5, 15.0m);
+        // Sample items to player inventory
+        Item wood = new Item("Wood", 200, 5.0m);
+        Item iron = new Item("Iron", 100, 15.0m);
+        Item leather = new Item("Leather", 150, 10.0m);
+        Item gemstone = new Item("Gemstone", 50, 50.0m);
+        Item cloth = new Item("Cloth", 250, 2.0m);
 
-        
-        player.AddItemToInventory(item1);
-        player.AddItemToInventory(item2);
+        player.AddItemToInventory(wood);
+        player.AddItemToInventory(iron);
+        player.AddItemToInventory(leather);
+        player.AddItemToInventory(gemstone);
+        player.AddItemToInventory(cloth);
 
-        
+        // Display player inventory
         player.ListInventory();
 
-        Recipe recipe = new Recipe("Iron Sword", 1, 50.0m);
-        recipe.AddRequiredItem(item1, 2);
-        recipe.AddRequiredItem(item2, 1);
+        // Create recipes
+        Recipe ironSword = new Recipe("Iron Sword", 1, 50.0m);
+        ironSword.AddRequiredItem(wood, 2);
+        ironSword.AddRequiredItem(iron, 1);
+
+        Recipe leatherArmor = new Recipe("Leather Armor", 1, 100.0m);
+        leatherArmor.AddRequiredItem(leather, 5);
+        leatherArmor.AddRequiredItem(cloth, 3);
+
+        Recipe gemstoneAmulet = new Recipe("Gemstone Amulet", 1, 200.0m);
+        gemstoneAmulet.AddRequiredItem(gemstone, 2);
+        gemstoneAmulet.AddRequiredItem(iron, 1);
+
+        Recipe woodenShield = new Recipe("Wooden Shield", 1, 30.0m);
+        woodenShield.AddRequiredItem(wood, 4);
+        woodenShield.AddRequiredItem(leather, 2);
 
         Workshop workshop = new Workshop();
-        workshop.Recipes.Add(recipe);
+        workshop.Recipes.Add(ironSword);
+        workshop.Recipes.Add(leatherArmor);
+        workshop.Recipes.Add(gemstoneAmulet);
+        workshop.Recipes.Add(woodenShield);
 
+        // Display all recipes
         workshop.ListAllRecipes();
-        workshop.ShowRecipeDetails("Iron Sword");
 
-        Console.WriteLine("Enter a number:");
-        string userInput2 = Library.GetUserInput();
-        if (Library.IsNumber(userInput2))
+        // Crafting menu
+        while (true)
         {
-            Console.WriteLine("You entered a valid number.");
+            Console.WriteLine("\nCrafting Menu:");
+            Console.WriteLine("1. Iron Sword");
+            Console.WriteLine("2. Leather Armor");
+            Console.WriteLine("3. Gemstone Amulet");
+            Console.WriteLine("4. Wooden Shield");
+            Console.WriteLine("5. Exit");
+            Console.Write("Select an option: ");
+            string choice = Library.GetUserInput();
+
+            if (choice == "1")
+            {
+                CraftItem(player, ironSword);
+            }
+            else if (choice == "2")
+            {
+                CraftItem(player, leatherArmor);
+            }
+            else if (choice == "3")
+            {
+                CraftItem(player, gemstoneAmulet);
+            }
+            else if (choice == "4")
+            {
+                CraftItem(player, woodenShield);
+            }
+            else if (choice == "5")
+            {
+                break;
+            }
+            else
+            {
+                Console.WriteLine("Invalid option. Please try again.");
+            }
+        }
+
+        // Display updated player inventory
+        Console.WriteLine("\nUpdated Inventory:");
+        player.ListInventory();
+    }
+
+    public static void CraftItem(Player player, Recipe recipe)
+    {
+        bool canCraft = true;
+        Dictionary<string, int> missingMaterials = new Dictionary<string, int>();
+
+        foreach (var item in recipe.RequiredItems)
+        {
+            int playerItemAmount = InventoryUtilities.GetItemAmount(player.Inventory, item.Key.Name);
+            if (playerItemAmount < item.Value)
+            {
+                canCraft = false;
+                missingMaterials[item.Key.Name] = item.Value - playerItemAmount;
+            }
+        }
+
+        if (canCraft)
+        {
+            foreach (var item in recipe.RequiredItems)
+            {
+                player.RemoveItemFromInventory(item.Key.Name, item.Value);
+            }
+            Console.WriteLine($"Crafted {recipe.Name}!");
         }
         else
         {
-            Console.WriteLine("Invalid number.");
+            Console.WriteLine($"Not enough materials to craft {recipe.Name}. Missing materials:");
+            foreach (var material in missingMaterials)
+            {
+                Console.WriteLine($"{material.Key}: {material.Value}");
+            }
         }
 
-        
-        List<Item> inventory = new List<Item>
-        {
-            new Item("Loaf of Bread", 1, 2.5m),
-            new Item("Milk", 1, 1.5m)
-        };
-
-        
-        int itemIndex = CollectionUtilities.SearchCollectionByNameIndex(inventory, "Loaf of Bread");
-        CollectionUtilities.RemoveFromCollectionByIndexNumber(inventory, itemIndex);
     }
 }
-
 
 /*
  * Craft System
